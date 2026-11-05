@@ -11,6 +11,9 @@ const {
 } = require("../services/complaint-query.service");
 
 const router = express.Router();
+const {
+    getStudentComplaintDetails
+} = require("../services/complaint-details.service");
 
 // GET /api/complaints/categories
 router.get("/categories", async (req, res) => {
@@ -76,6 +79,43 @@ router.get("/", async (req, res) => {
 
 // POST /api/complaints
 // Authentication middleware will be integrated with Member B's implementation.
+
+// GET /api/complaints/:id
+router.get("/:id", async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication is required"
+            });
+        }
+
+        const complaint = await getStudentComplaintDetails(
+            req.user,
+            req.params.id
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: complaint
+        });
+    } catch (error) {
+        if (error instanceof ComplaintError) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message
+            });
+        }
+
+        console.error("Failed to retrieve complaint details:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to retrieve complaint details"
+        });
+    }
+});
+
 router.post("/", async (req, res) => {
     try {
         if (!req.user) {
@@ -108,5 +148,6 @@ router.post("/", async (req, res) => {
         });
     }
 });
+
 
 module.exports = router;
