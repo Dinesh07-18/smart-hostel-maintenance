@@ -1,6 +1,7 @@
 const express = require("express");
 const authenticateToken = require("../middleware/auth.middleware");
 const pool = require("../config/database");
+const allowRoles = require("../middleware/role.middleware");
 
 const {
     createComplaint,
@@ -44,6 +45,7 @@ router.get("/categories", async (req, res) => {
 
 
 router.use(authenticateToken);
+router.use(allowRoles("STUDENT"));
 
 // GET /api/complaints
 router.get("/", async (req, res) => {
