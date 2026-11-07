@@ -8,6 +8,7 @@ const healthRoutes = require("./routes/health.routes");
 const complaintRoutes = require("./routes/complaint.routes");
 const authRoutes = require("./routes/auth.routes");
 const staffRoutes = require("./routes/staff.routes");
+const wardenRoutes = require("./routes/warden.routes");
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/warden", wardenRoutes);
 
 app.use((req, res) => {
     res.status(404).json({
