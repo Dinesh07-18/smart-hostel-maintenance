@@ -1,4 +1,5 @@
-﻿const express = require("express");
+const express = require("express");
+const authenticateToken = require("../middleware/auth.middleware");
 const pool = require("../config/database");
 
 const {
@@ -14,6 +15,7 @@ const router = express.Router();
 const {
     getStudentComplaintDetails
 } = require("../services/complaint-details.service");
+
 
 // GET /api/complaints/categories
 router.get("/categories", async (req, res) => {
@@ -39,6 +41,9 @@ router.get("/categories", async (req, res) => {
         });
     }
 });
+
+
+router.use(authenticateToken);
 
 // GET /api/complaints
 router.get("/", async (req, res) => {
@@ -79,6 +84,7 @@ router.get("/", async (req, res) => {
 
 // POST /api/complaints
 // Authentication middleware will be integrated with Member B's implementation.
+
 
 // GET /api/complaints/:id
 router.get("/:id", async (req, res) => {
