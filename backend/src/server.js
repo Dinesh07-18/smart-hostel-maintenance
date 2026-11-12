@@ -1,4 +1,4 @@
-﻿require("dotenv").config();
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
@@ -9,6 +9,7 @@ const complaintRoutes = require("./routes/complaint.routes");
 const authRoutes = require("./routes/auth.routes");
 const staffRoutes = require("./routes/staff.routes");
 const wardenRoutes = require("./routes/warden.routes");
+const feedbackRoutes = require("./routes/feedback.routes");
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/warden", wardenRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 app.use((req, res) => {
     res.status(404).json({

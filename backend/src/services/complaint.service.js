@@ -1,4 +1,5 @@
-﻿const pool = require("../config/database");
+const pool = require("../config/database");
+const { getActivePolicy, insertPrioritySnapshot } = require("./priority.service");
 
 class ComplaintError extends Error {
     constructor(message, statusCode = 400) {
@@ -166,6 +167,15 @@ async function createComplaint(user, data) {
 
         const complaintId = result.insertId;
 
+        // Calculate and persist the initial priority snapshot in the same transaction.
+        // At submission, waiting time is zero; queue refreshes update it as time passes.
+        const policyId = await getActivePolicy(connection);
+        const priority = await insertPrioritySnapshot(connection, {
+            complaint_id: complaintId,
+            severity,
+            urgency
+        }, policyId, 0);
+
         // Record the initial complaint event.
         await connection.execute(`
             INSERT INTO complaint_events (
@@ -195,7 +205,9 @@ async function createComplaint(user, data) {
             title: title.trim(),
             severity,
             urgency,
-            status: "SUBMITTED"
+            status: "SUBMITTED",
+            priority_score: priority.total_priority_score,
+            priority_level: priority.priority_level
         };
 
     } catch (error) {
