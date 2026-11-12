@@ -1,5 +1,6 @@
-const pool = require("../config/database");
+﻿const pool = require("../config/database");
 const { ComplaintError } = require("./complaint.service");
+const { refreshOpenComplaintPriorities } = require("./priority.service");
 
 const VALID_STATUSES = [
     "SUBMITTED", "VERIFIED", "ASSIGNED", "IN_PROGRESS",
@@ -57,6 +58,9 @@ async function listWardenComplaints(user, options = {}) {
         throw new ComplaintError("Invalid complaint status filter");
     }
 
+    // Re-score unresolved complaints at most once per hour so waiting time affects queue order.
+    await refreshOpenComplaintPriorities();
+
     const scopeJoin = user.role === "ADMINISTRATOR"
         ? ""
         : `INNER JOIN warden_assignments wa
@@ -104,10 +108,16 @@ async function listWardenComplaints(user, options = {}) {
             ) latest ON latest.complaint_id = cps1.complaint_id
                    AND latest.latest_at = cps1.calculated_at
         ) latest_priority ON latest_priority.complaint_id = c.complaint_id
-        LEFT JOIN complaint_assignments ca
-               ON ca.complaint_id = c.complaint_id
-              AND ca.assignment_status = 'ACTIVE'
-              AND ca.unassigned_at IS NULL
+        LEFT JOIN (
+            SELECT ca1.*
+            FROM complaint_assignments ca1
+            INNER JOIN (
+                SELECT complaint_id, MAX(assignment_id) AS latest_assignment_id
+                FROM complaint_assignments
+                GROUP BY complaint_id
+            ) latest_assignment
+                ON latest_assignment.latest_assignment_id = ca1.assignment_id
+        ) ca ON ca.complaint_id = c.complaint_id
         LEFT JOIN maintenance_staff_profiles msp ON msp.staff_id = ca.staff_id
         LEFT JOIN users assigned_staff ON assigned_staff.user_id = msp.user_id
         WHERE (? IS NULL OR c.status = ?)
@@ -174,7 +184,27 @@ async function listAssignableStaff(user, hostelIdValue) {
     return rows;
 }
 
+function validateAssignmentData(data = {}) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+        throw new ComplaintError("Request body must be a JSON object", 400);
+    }
+
+    if (
+        data.remarks !== undefined &&
+        data.remarks !== null &&
+        typeof data.remarks !== "string"
+    ) {
+        throw new ComplaintError("Remarks must be a string", 400);
+    }
+
+    if (typeof data.remarks === "string" && data.remarks.length > 2000) {
+        throw new ComplaintError("Remarks cannot exceed 2000 characters", 400);
+    }
+
+    return data;
+}
 async function assignComplaint(user, complaintIdValue, data = {}) {
+    data = validateAssignmentData(data);
     const userId = positiveId(user?.user_id, "authenticated user ID");
     const complaintId = positiveId(complaintIdValue, "complaint ID");
     const staffId = positiveId(data.staff_id, "staff ID");
@@ -225,8 +255,11 @@ async function assignComplaint(user, complaintIdValue, data = {}) {
         if (!staffRows.length) {
             throw new ComplaintError("Staff member is not actively assigned to this hostel", 400);
         }
-        if (staffRows[0].availability_status === "UNAVAILABLE") {
-            throw new ComplaintError("Selected staff member is unavailable", 409);
+        if (staffRows[0].availability_status !== "AVAILABLE") {
+            throw new ComplaintError(
+                `Selected staff member is not available (current status: ${staffRows[0].availability_status})`,
+                409
+            );
         }
 
         const [activeAssignments] = await connection.execute(`
@@ -301,5 +334,6 @@ module.exports = {
     listAssignableStaff,
     assignComplaint,
     pagination,
-    positiveId
+    positiveId,
+    validateAssignmentData
 };

@@ -33,3 +33,52 @@ test("positiveId rejects zero and non-numeric IDs", () => {
     assert.throws(() => positiveId(0, "staff ID"), ComplaintError);
     assert.throws(() => positiveId("abc", "staff ID"), ComplaintError);
 });
+
+const { validateAssignmentData } = require("../src/services/warden.service");
+
+test("assignment validation accepts an empty request body", () => {
+    assert.deepEqual(validateAssignmentData(), {});
+});
+
+test("assignment validation accepts valid staff ID and remarks", () => {
+    const data = { staff_id: 1, remarks: "Plumbing repair assigned" };
+    assert.equal(validateAssignmentData(data), data);
+});
+
+test("assignment validation accepts missing and null remarks", () => {
+    assert.deepEqual(validateAssignmentData({ staff_id: 1 }), { staff_id: 1 });
+    assert.deepEqual(
+        validateAssignmentData({ staff_id: 1, remarks: null }),
+        { staff_id: 1, remarks: null }
+    );
+});
+
+test("assignment validation rejects null, arrays and primitive request bodies", () => {
+    for (const data of [null, [], "invalid", 123, true]) {
+        assert.throws(() => validateAssignmentData(data), ComplaintError);
+    }
+});
+
+test("assignment validation rejects non-string remarks", () => {
+    for (const remarks of [123, true, [], {}]) {
+        assert.throws(
+            () => validateAssignmentData({ staff_id: 1, remarks }),
+            ComplaintError
+        );
+    }
+});
+
+test("assignment validation accepts remarks of exactly 2000 characters", () => {
+    const data = { staff_id: 1, remarks: "a".repeat(2000) };
+    assert.equal(validateAssignmentData(data), data);
+});
+
+test("assignment validation rejects remarks longer than 2000 characters", () => {
+    const data = { staff_id: 1, remarks: "a".repeat(2001) };
+    assert.throws(() => validateAssignmentData(data), ComplaintError);
+});
+
+test("assignment validation rejects more than 2000 whitespace characters", () => {
+    const data = { staff_id: 1, remarks: " ".repeat(2001) };
+    assert.throws(() => validateAssignmentData(data), ComplaintError);
+});

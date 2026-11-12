@@ -1,4 +1,4 @@
-﻿# Function Test Results
+# Function Test Results
 
 ## 1. fn_complaint_waiting_hours
 
@@ -37,4 +37,4 @@ Both functions were successfully created and tested in MySQL 8.4.13.
 
 All four test cases passed.
 
-Note: The waiting-hours function calculates elapsed duration, not the weighted waiting-time priority score. The priority calculation formula remains undefined in the project requirements.
+Note: The waiting-hours SQL function calculates elapsed duration, not the weighted priority score. The application-level scoring proposal is now documented in `17_priority_policy_proposal.md`. Its score mappings, waiting-time bands and thresholds are proposed defaults and still require project/faculty review. The SQL function results above remain historical database-function test results.

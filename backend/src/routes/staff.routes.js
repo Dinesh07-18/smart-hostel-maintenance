@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const pool = require("../config/database");
 const authenticateToken = require("../middleware/auth.middleware");
 const allowRoles = require("../middleware/role.middleware");
@@ -33,7 +33,7 @@ router.get("/complaints", async (req, res) => {
                 ON cc.category_id = c.category_id
             JOIN hostels h
                 ON h.hostel_id = c.hostel_id
-            JOIN rooms r
+            LEFT JOIN rooms r
                 ON r.room_id = c.room_id
             WHERE msp.user_id = ?
               AND ca.assignment_status = 'ACTIVE'
