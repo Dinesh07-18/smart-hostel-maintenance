@@ -2,6 +2,7 @@ const express = require("express");
 const authenticateToken = require("../middleware/auth.middleware");
 const pool = require("../config/database");
 const allowRoles = require("../middleware/role.middleware");
+const { findSimilarComplaints } = require("../services/vector.service");
 
 const {
     createComplaint,
@@ -157,5 +158,22 @@ router.post("/", async (req, res) => {
     }
 });
 
+
+router.post("/similar", async (req, res) => {
+    try {
+        const text = [
+            typeof req.body.title === "string" ? req.body.title.trim() : "",
+            typeof req.body.description === "string" ? req.body.description.trim() : ""
+        ].filter(Boolean).join("\n");
+        if (text.length < 3 || text.length > 5150) {
+            return res.status(400).json({ success: false, message: "Provide complaint text between 3 and 5150 characters" });
+        }
+        const result = await findSimilarComplaints(req.user, text, 5);
+        return res.status(200).json({ success: true, data: result.matches });
+    } catch (error) {
+        console.error("Similar complaint search failed:", error.message);
+        return res.status(503).json({ success: false, message: "Similar complaint search is temporarily unavailable" });
+    }
+});
 
 module.exports = router;
