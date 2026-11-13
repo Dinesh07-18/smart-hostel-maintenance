@@ -1,27 +1,45 @@
-# Node.js
+﻿# Node.js
 node_modules/
+**/node_modules/
 .next/
 dist/
 build/
+coverage/
 
-# Environment variables and secrets
+# Python
+.venv/
+.venv-*/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Environment files and secrets
 .env
 .env.*
 !.env.example
 
-# Python
-.venv/
-venv/
-__pycache__/
-*.pyc
+# Archives
+*.zip
+*.7z
+*.rar
 
-# Testing and coverage
-coverage/
+# Backups
+_backups/
+**/_backups/
+*.bak
+*.before-helper
+*.pre-*
+*.validation-backup
+*.lint-fix-backup*
+*.semantic-search-backup*
+*.display-fix-*
+*.qdrant-backup-*
+*.feedback-backup
 
-# OS files
+# Logs and OS files
+*.log
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-**/node_modules/

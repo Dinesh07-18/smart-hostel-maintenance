@@ -193,6 +193,12 @@ async function createComplaint(user, data) {
             "Complaint submitted"
         ]);
 
+        // Queue vector indexing atomically with complaint creation.
+        await connection.execute(
+            "INSERT INTO complaint_embedding_jobs (complaint_id, status, attempt_count, max_attempts, next_attempt_at) VALUES (?, 'PENDING', 0, 6, NOW())",
+            [complaintId]
+        );
+
         await connection.commit();
         transactionStarted = false;
 

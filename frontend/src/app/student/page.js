@@ -26,6 +26,9 @@ export default function StudentDashboard() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [similarComplaints, setSimilarComplaints] = useState([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState("");
 
   const [form, setForm] = useState({
     category_id: "1",
@@ -98,6 +101,83 @@ export default function StudentDashboard() {
     });
   }
 
+  useEffect(() => {
+    const title = form.title.trim();
+    const description = form.description.trim();
+    const combinedLength = title.length + (title && description ? 1 : 0) + description.length;
+
+    if (combinedLength < 3) {
+      const clearTimer = setTimeout(() => {
+        setSimilarComplaints([]);
+        setSimilarError("");
+        setSimilarLoading(false);
+      }, 0);
+
+      return () => clearTimeout(clearTimer);
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      setSimilarLoading(true);
+      setSimilarError("");
+
+      try {
+        // Keep search text within the backend's 5,150-character limit.
+        const availableDescriptionLength = Math.max(
+          0,
+          5150 - title.length - (title && description ? 1 : 0)
+        );
+
+        const response = await fetch(`${API_URL}/complaints/similar`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title,
+            description: description.slice(0, availableDescriptionLength),
+          }),
+          signal: controller.signal,
+        });
+
+        const result = await response.json();
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/");
+          return;
+        }
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Similar complaint search failed");
+        }
+
+        setSimilarComplaints(Array.isArray(result.data) ? result.data : []);
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Similar complaint lookup failed:", error);
+          setSimilarComplaints([]);
+          setSimilarError("Similar complaint suggestions are temporarily unavailable.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSimilarLoading(false);
+        }
+      }
+    }, 600);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [form.title, form.description, router]);
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -138,6 +218,8 @@ export default function StudentDashboard() {
       }
 
       setMessage("Complaint submitted successfully!");
+      setSimilarComplaints([]);
+      setSimilarError("");
 
       setForm({
         category_id: categories[0]?.category_id
@@ -404,6 +486,56 @@ export default function StudentDashboard() {
                       {form.description.length}/5000
                     </p>
                   </div>
+
+                  {(similarLoading || similarError || similarComplaints.length > 0 || (form.title.trim() + form.description.trim()).length >= 3) && (
+                    <section
+                      className="rounded-xl border border-blue-100 bg-blue-50/60 p-4"
+                      aria-live="polite"
+                    >
+                      <h3 className="text-sm font-semibold text-slate-800">
+                        Similar existing complaints
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        These suggestions may help you check whether this issue has already been reported.
+                      </p>
+
+                      {similarLoading && (
+                        <p className="mt-3 text-xs text-blue-700">
+                          Checking for similar complaints...
+                        </p>
+                      )}
+
+                      {similarError && (
+                        <p className="mt-3 text-xs text-amber-700">
+                          {similarError}
+                        </p>
+                      )}
+
+                      {!similarLoading && !similarError && similarComplaints.length === 0 && (
+                        <p className="mt-3 text-xs text-slate-500">
+                          No similar complaints found.
+                        </p>
+                      )}
+
+                      {similarComplaints.length > 0 && (
+                        <ul className="mt-3 space-y-2">
+                          {similarComplaints.map((item) => (
+                            <li
+                              key={item.complaint_id}
+                              className="rounded-lg border border-blue-100 bg-white p-3"
+                            >
+                              <p className="text-sm font-medium text-slate-800">
+                                {item.title || "Existing complaint"}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Complaint #{item.complaint_id}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                  )}
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
