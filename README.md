@@ -823,7 +823,7 @@ The verified local integration uses:
 
 | Component | Port |
 |---|---:|
-| Frontend | 5000 |
+| Frontend | 3000 |
 | Backend API | 5001 |
 | Embedding service | 8001 |
 | Qdrant | 6333 |
