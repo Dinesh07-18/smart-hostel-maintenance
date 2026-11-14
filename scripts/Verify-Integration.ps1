@@ -32,10 +32,26 @@ Invoke-Npm $Backend @("test") "Backend automated tests"
 Invoke-Npm $Frontend @("run","lint") "Frontend lint"
 Invoke-Npm $Frontend @("run","build") "Frontend production build"
 
-$Python = Get-Command python -ErrorAction SilentlyContinue
-if ($Python) {
+$EmbeddingService = Join-Path $Backend "embedding_service"
+$VenvPython = Join-Path $EmbeddingService ".venv\Scripts\python.exe"
+
+if (Test-Path $VenvPython) {
+    $PythonExecutable = $VenvPython
+    $PythonArguments = @()
+} elseif (Get-Command py -ErrorAction SilentlyContinue) {
+    $PythonExecutable = "py"
+    $PythonArguments = @("-3.12")
+} else {
+    $PythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($PythonCommand) {
+        $PythonExecutable = $PythonCommand.Source
+        $PythonArguments = @()
+    }
+}
+
+if ($PythonExecutable) {
     Write-Host "`n=== Python embedding service syntax check ===" -ForegroundColor Cyan
-    & python -m compileall -q (Join-Path $Backend "embedding_service")
+    & $PythonExecutable @PythonArguments -m compileall -q -x '[\\/]\.venv[\\/]' $EmbeddingService
     if ($LASTEXITCODE -ne 0) { throw "Python embedding service syntax check failed." }
 } else {
     Write-Warning "Python was not found; embedding service syntax check was skipped."
