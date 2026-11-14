@@ -26,6 +26,8 @@ The platform combines a centralized complaint management workflow with automated
 16. [Testing](#16-testing)
 17. [Security and Access Control](#17-security-and-access-control)
 18. [Future Enhancements](#18-future-enhancements)
+19. [Project Status](#19-project-status)
+20. [Windows Integration and Safe Development Setup](#20-windows-integration-and-safe-development-setup)
 
 ---
 
@@ -573,7 +575,7 @@ pip install fastapi uvicorn requests numpy sentence-transformers
 Start the FastAPI service:
 
 \`\`\`powershell
-uvicorn app:app --host 127.0.0.1 --port 8002
+uvicorn app:app --host 127.0.0.1 --port 8001
 \`\`\`
 
 The embedding service requires access to the configured Qdrant instance.
@@ -589,7 +591,7 @@ The service uses the configured Qdrant URL and collection name.
 After configuring the backend and applying the required database migration, navigate to the backend directory and execute:
 
 \`\`\`powershell
-node src/workers/embedding.worker.js
+npm run worker
 \`\`\`
 
 The worker processes embedding jobs from the database queue.
@@ -788,3 +790,108 @@ The system brings together role-based authentication, student complaint manageme
 **GitHub:** https://github.com/Dinesh07-18/smart-hostel-maintenance
 
 **Project:** Smart Hostel Maintenance & Complaint Prioritization Platform
+
+---
+
+## 20. Windows Integration and Safe Development Setup
+
+### Windows environment preparation
+
+For Windows development, run `scripts/Initialize-LocalEnvironment.ps1` and follow `docs/WINDOWS_SETUP.md`.
+
+Configure local environment files using:
+
+- `backend/.env.example`
+- `frontend/.env.example`
+
+Never commit real credentials, JWT secrets, or local environment files.
+
+### Database initialization
+
+For a fresh development database, follow this sequence:
+
+1. Run `database/create_database.sql`.
+2. Apply `database/migrations/001_initial_schema.sql`.
+3. Apply `database/migrations/002_complaint_embedding_jobs.sql`.
+4. Apply `database/seeds/001_reference_data.sql`.
+
+Do not rerun initialization scripts against an existing database without checking their effects and current migration state.
+
+### Local service ports
+
+The verified local integration uses:
+
+| Component | Port |
+|---|---:|
+| Frontend | 5000 |
+| Backend API | 5001 |
+| Embedding service | 8001 |
+| Qdrant | 6333 |
+
+Start Qdrant using `infrastructure/qdrant/docker-compose.yml`.
+
+Start the FastAPI embedding service from `backend/embedding_service` on port `8001`.
+
+Start the embedding worker from the backend directory using:
+
+```powershell
+npm run worker
+```
+
+These are local integration settings; adjust them if your environment uses different ports.
+
+### Development demo data
+
+The demo seed is gated and intended for development databases.
+
+Before running it:
+
+- Confirm that the backend targets the intended development database.
+- Set a unique `DEMO_SEED_PASSWORD` in `backend/.env`.
+- Use a password between 12 and 128 characters.
+- Review the seed script and its safeguards.
+
+Run from the `backend` directory in PowerShell:
+
+```powershell
+$env:NODE_ENV = "development"
+node .\scripts\seed-demo.js
+```
+
+The script is designed to refuse production-like database names and reuse existing records rather than truncate or delete data. Review its implementation before execution.
+
+### Semantic search API
+
+Authenticated users can submit semantic complaint searches through:
+
+`POST /api/search/complaints`
+
+Example request body:
+
+```json
+{
+  "text": "water leakage in the bathroom",
+  "limit": 5
+}
+```
+
+The API derives hostel scope from the authenticated user's assignments and verifies vector-search matches against MySQL before returning complaint details.
+
+Further documentation:
+
+- `docs/SEMANTIC_SEARCH_IMPLEMENTATION.md`
+- `docs/testing/SEMANTIC_SEARCH_EVALUATION.md`
+
+### Integration verification
+
+After implementation and dependency setup, run the consolidated checks from the repository root:
+
+```powershell
+.\scripts\Verify-Integration.ps1 -InstallDependencies
+```
+
+This script runs backend automated tests, frontend linting and production build checks, and a Python embedding-service syntax check when Python is installed.
+
+It does not start MySQL, Qdrant, or the embedding model service.
+
+Complete the live role-by-role API and browser workflow checks documented in `docs/IMPLEMENTATION_STATUS.md` before considering the integration fully verified.

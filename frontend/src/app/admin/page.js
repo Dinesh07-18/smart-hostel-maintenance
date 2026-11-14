@@ -1,7 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, logout, getUser } from "@/lib/api";
+import SemanticComplaintSearch from "@/components/SemanticComplaintSearch";
+import AdminUserManagement from "@/components/AdminUserManagement";
 
 const STATUSES = [
   "ALL",
@@ -261,8 +263,8 @@ export default function AdminDashboard() {
               H
             </div>
             <div>
-              <p className="font-bold tracking-wide">Smart Hostel</p>
-              <p className="text-xs text-slate-400">Maintenance Platform</p>
+              <p className="font-bold tracking-wide">Hostel Complaint Management</p>
+              <p className="text-xs text-slate-400">Complaint Operations</p>
             </div>
           </div>
 
@@ -413,7 +415,10 @@ export default function AdminDashboard() {
             </div>
 
             {/* Feedback message */}
-            {message && (
+            <div className="mb-6"><SemanticComplaintSearch title="Search complaints across the platform" /></div>
+        <div className="mb-6"><AdminUserManagement /></div>
+
+        {message && (
               <div
                 className={`rounded-xl border px-4 py-3 text-sm ${
                   message.toLowerCase().includes("successfully")
@@ -601,7 +606,7 @@ export default function AdminDashboard() {
             </div>
 
             <footer className="pb-3 text-center text-xs text-slate-400">
-              Smart Hostel Maintenance Platform
+              Hostel Complaint Management
             </footer>
           </div>
         </section>

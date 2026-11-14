@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, getUser } from "@/lib/api";
+import SemanticComplaintSearch from "@/components/SemanticComplaintSearch";
 
 export default function StaffDashboard() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function StaffDashboard() {
 
       if (response.status === 401) {
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
         router.push("/");
         return;
       }
@@ -46,9 +48,18 @@ export default function StaffDashboard() {
 
     Promise.resolve().then(() => {
       const token = localStorage.getItem("token");
+      const storedUser = getUser();
+      const role = storedUser?.role || storedUser?.role_name;
+      const rolePaths = { STUDENT: "/student", MAINTENANCE_STAFF: "/staff", WARDEN: "/warden", ADMINISTRATOR: "/admin" };
 
-      if (!token) {
-        router.push("/");
+      if (!token || !rolePaths[role]) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        router.replace("/");
+        return;
+      }
+      if (role !== "MAINTENANCE_STAFF") {
+        router.replace(rolePaths[role]);
         return;
       }
 
@@ -80,6 +91,13 @@ export default function StaffDashboard() {
 
       const result = await response.json();
 
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        router.push("/");
+        return;
+      }
+
       if (result.success) {
         setMessage("Complaint status updated successfully!");
         loadComplaints(token);
@@ -94,6 +112,7 @@ export default function StaffDashboard() {
 
   function handleLogout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     router.push("/");
   }
 
@@ -102,6 +121,7 @@ export default function StaffDashboard() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-start justify-between">
           <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-700">Hostel Complaint Management</p>
             <h1 className="text-3xl font-bold text-gray-900">
               Maintenance Staff Dashboard
             </h1>
@@ -117,6 +137,8 @@ export default function StaffDashboard() {
             Logout
           </button>
         </div>
+
+        <div className="mb-6"><SemanticComplaintSearch title="Search complaints in your assigned hostels" /></div>
 
         {message && (
           <div className="mb-6 rounded-lg bg-blue-100 px-4 py-3 text-blue-800">

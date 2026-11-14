@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, getUser } from "@/lib/api";
+import StudentFeedback from "@/components/StudentFeedback";
 
 function statusStyle(status) {
   const styles = {
@@ -55,7 +56,8 @@ export default function StudentDashboard() {
       const categoriesResult = await categoriesResponse.json();
 
       if (complaintsResponse.status === 401) {
-        localStorage.clear();
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
         router.push("/");
         return;
       }
@@ -85,9 +87,18 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    const storedUser = getUser();
+    const role = storedUser?.role || storedUser?.role_name;
+    const rolePaths = { STUDENT: "/student", MAINTENANCE_STAFF: "/staff", WARDEN: "/warden", ADMINISTRATOR: "/admin" };
 
-    if (!token) {
-      router.push("/");
+    if (!token || !rolePaths[role]) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      router.replace("/");
+      return;
+    }
+    if (role !== "STUDENT") {
+      router.replace(rolePaths[role]);
       return;
     }
 
@@ -127,21 +138,15 @@ export default function StudentDashboard() {
 
       try {
         // Keep search text within the backend's 5,150-character limit.
-        const availableDescriptionLength = Math.max(
-          0,
-          5150 - title.length - (title && description ? 1 : 0)
-        );
+        const searchText = `${title}${title && description ? "\n" : ""}${description}`.slice(0, 5150);
 
-        const response = await fetch(`${API_URL}/complaints/similar`, {
+        const response = await fetch(`${API_URL}/search/complaints`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            title,
-            description: description.slice(0, availableDescriptionLength),
-          }),
+          body: JSON.stringify({ text: searchText, limit: 5 }),
           signal: controller.signal,
         });
 
@@ -207,7 +212,8 @@ export default function StudentDashboard() {
       const result = await response.json();
 
       if (response.status === 401) {
-        localStorage.clear();
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
         router.push("/");
         return;
       }
@@ -241,7 +247,8 @@ export default function StudentDashboard() {
   }
 
   function logout() {
-    localStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     router.push("/");
   }
 
@@ -276,8 +283,8 @@ export default function StudentDashboard() {
               H
             </div>
             <div>
-              <p className="font-bold tracking-wide">Smart Hostel</p>
-              <p className="text-xs text-slate-400">Maintenance Platform</p>
+              <p className="font-bold tracking-wide">Hostel Complaints</p>
+              <p className="text-xs text-slate-400">Management System</p>
             </div>
           </div>
 
@@ -493,7 +500,7 @@ export default function StudentDashboard() {
                       aria-live="polite"
                     >
                       <h3 className="text-sm font-semibold text-slate-800">
-                        Similar existing complaints
+                        Similar complaints in your hostel
                       </h3>
                       <p className="mt-1 text-xs text-slate-500">
                         These suggestions may help you check whether this issue has already been reported.
@@ -528,7 +535,8 @@ export default function StudentDashboard() {
                                 {item.title || "Existing complaint"}
                               </p>
                               <p className="mt-1 text-xs text-slate-500">
-                                Complaint #{item.complaint_id}
+                                Complaint #{item.complaint_id} · {item.status || "Status unavailable"}
+                                {Number.isFinite(Number(item.similarity)) ? ` · ${Number(item.similarity * 100).toFixed(1)}% match` : ""}
                               </p>
                             </li>
                           ))}
@@ -677,8 +685,10 @@ export default function StudentDashboard() {
               </section>
             </div>
 
+            <StudentFeedback complaints={complaints} />
+
             <footer className="pb-3 text-center text-xs text-slate-400">
-              Smart Hostel Maintenance Platform
+              Hostel Complaint Management
             </footer>
           </div>
         </section>

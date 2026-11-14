@@ -3,6 +3,7 @@ const authenticateToken = require("../middleware/auth.middleware");
 const pool = require("../config/database");
 const allowRoles = require("../middleware/role.middleware");
 const { findSimilarComplaints } = require("../services/vector.service");
+const rateLimit = require("../middleware/rate-limit.middleware");
 
 const {
     createComplaint,
@@ -159,7 +160,7 @@ router.post("/", async (req, res) => {
 });
 
 
-router.post("/similar", async (req, res) => {
+router.post("/similar", rateLimit({ windowMs: 60 * 1000, max: 30, message: "Too many semantic searches. Try again shortly." }), async (req, res) => {
     try {
         const text = [
             typeof req.body.title === "string" ? req.body.title.trim() : "",

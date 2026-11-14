@@ -1,4 +1,4 @@
-﻿# Node.js
+# Node.js
 node_modules/
 **/node_modules/
 .next/
@@ -20,6 +20,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!**/.env.example
 
 # Archives
 *.zip

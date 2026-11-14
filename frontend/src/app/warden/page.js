@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, logout, getUser } from "@/lib/api";
+import SemanticComplaintSearch from "@/components/SemanticComplaintSearch";
 
 const STATUSES = [
   "ALL",
@@ -190,6 +191,7 @@ export default function WardenDashboard() {
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-700">Hostel Complaint Management</p>
             <h1 className="text-3xl font-bold text-gray-900">
               Warden Dashboard
             </h1>
@@ -204,6 +206,8 @@ export default function WardenDashboard() {
             Logout
           </button>
         </header>
+
+        <div className="mb-6"><SemanticComplaintSearch title="Search complaints across your assigned hostels" /></div>
 
         {message && (
           <div className="mb-5 rounded-lg bg-blue-100 p-4 text-blue-800">

@@ -1,0 +1,13 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: hostel-complaint-qdrant
+    restart: unless-stopped
+    ports:
+      # Bind to loopback for local development; do not expose Qdrant publicly.
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+volumes:
+  qdrant_storage:
