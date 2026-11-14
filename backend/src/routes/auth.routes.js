@@ -1,11 +1,12 @@
-﻿const express = require("express");
+const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
+const rateLimit = require("../middleware/rate-limit.middleware");
 
 const router = express.Router();
 
-router.post("/login", async (req, res) => {
+router.post("/login", rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: "Too many login attempts. Try again in 15 minutes." }), async (req, res) => {
     try {
         const { email, password } = req.body || {};
 
@@ -17,7 +18,7 @@ router.post("/login", async (req, res) => {
             });
         }
 
-        if (!process.env.JWT_SECRET) {
+        if (!process.env.JWT_SECRET || Buffer.byteLength(process.env.JWT_SECRET, "utf8") < 32) {
             console.error("JWT_SECRET is not configured");
             return res.status(500).json({
                 success: false,
@@ -57,7 +58,7 @@ router.post("/login", async (req, res) => {
         const token = jwt.sign(
             { sub: String(user.user_id) },
             process.env.JWT_SECRET,
-            { expiresIn: "8h", issuer: "smart-hostel-maintenance" }
+            { expiresIn: "8h", issuer: "smart-hostel-maintenance", algorithm: "HS256" }
         );
 
         return res.status(200).json({

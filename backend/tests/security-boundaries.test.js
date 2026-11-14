@@ -1,4 +1,4 @@
-﻿const test = require("node:test");
+const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const pool = require("../src/config/database");
@@ -184,13 +184,14 @@ test("student semantic search uses exactly the active hostel ID", async () => {
         };
 
         const result = await findSimilarComplaints(
-            { user_id: 25 },
+            { user_id: 25, role: "STUDENT" },
             "Water leakage in bathroom",
             5
         );
 
         assert.deepEqual(result.matches, []);
         assert.equal(capturedBody.hostel_id, 12);
+        assert.deepEqual(capturedBody.hostel_ids, [12]);
         assert.equal(capturedBody.text, "Water leakage in bathroom");
         assert.equal(capturedBody.limit, 5);
     } finally {
@@ -215,7 +216,7 @@ test("student semantic search rejects missing active hostel assignment", async (
 
         await assert.rejects(
             () => findSimilarComplaints(
-                { user_id: 25 },
+                { user_id: 25, role: "STUDENT" },
                 "Water leakage"
             ),
             /single active hostel assignment/
@@ -247,7 +248,7 @@ test("student semantic search rejects multiple active hostel assignments", async
 
         await assert.rejects(
             () => findSimilarComplaints(
-                { user_id: 25 },
+                { user_id: 25, role: "STUDENT" },
                 "Water leakage"
             ),
             /single active hostel assignment/
@@ -273,7 +274,7 @@ test("semantic search rejects invalid student identity before database access", 
 
         await assert.rejects(
             () => findSimilarComplaints(
-                { user_id: 0 },
+                { user_id: 0, role: "STUDENT" },
                 "Water leakage"
             ),
             /Authenticated student identity required/
@@ -460,7 +461,7 @@ test("authentication middleware rejects an invalid JWT", async () => {
     let queryCount = 0;
 
     try {
-        process.env.JWT_SECRET = "phase6-temporary-test-secret";
+        process.env.JWT_SECRET = "phase6-temporary-test-secret-32-bytes-minimum";
         pool.execute = async () => {
             queryCount++;
             return [[], []];
@@ -493,11 +494,11 @@ test("authentication middleware rejects an invalid JWT", async () => {
 test("authentication middleware accepts a valid token for an active account", async () => {
     const originalExecute = pool.execute;
     const originalSecret = process.env.JWT_SECRET;
-    const testSecret = "phase6-temporary-test-secret";
+    const testSecret = "phase6-temporary-test-secret-32-bytes-minimum";
 
     try {
         process.env.JWT_SECRET = testSecret;
-        const token = jwtForSecurityTests.sign({ sub: 42 }, testSecret, { expiresIn: "5m" });
+        const token = jwtForSecurityTests.sign({ sub: 42 }, testSecret, { expiresIn: "5m", issuer: "smart-hostel-maintenance" });
 
         let capturedParams;
         pool.execute = async (sql, params) => {
@@ -541,9 +542,9 @@ test("authentication middleware rejects an inactive account", async () => {
     const originalSecret = process.env.JWT_SECRET;
 
     try {
-        const testSecret = "phase6-temporary-test-secret";
+        const testSecret = "phase6-temporary-test-secret-32-bytes-minimum";
         process.env.JWT_SECRET = testSecret;
-        const token = jwtForSecurityTests.sign({ sub: 43 }, testSecret, { expiresIn: "5m" });
+        const token = jwtForSecurityTests.sign({ sub: 43 }, testSecret, { expiresIn: "5m", issuer: "smart-hostel-maintenance" });
 
         pool.execute = async () => [[{
             user_id: 43,
@@ -573,4 +574,93 @@ test("authentication middleware rejects an inactive account", async () => {
         if (originalSecret === undefined) delete process.env.JWT_SECRET;
         else process.env.JWT_SECRET = originalSecret;
     }
+});
+
+test("warden semantic search is scoped to currently assigned hostels", async () => {
+    const originalExecute = pool.execute;
+    const originalFetch = global.fetch;
+    try {
+        let body;
+        pool.execute = async (sql, params) => {
+            assert.match(sql, /warden_assignments/);
+            assert.deepEqual(params, [41]);
+            return [[{ hostel_id: 8 }, { hostel_id: 9 }], []];
+        };
+        global.fetch = async (_url, options) => {
+            body = JSON.parse(options.body);
+            return { ok: true, async json() { return { matches: [] }; } };
+        };
+        const { searchComplaints } = require("../src/services/vector.service");
+        assert.deepEqual(await searchComplaints({ user_id: 41, role: "WARDEN" }, "bathroom water leak"), []);
+        assert.deepEqual(body.hostel_ids, [8, 9]);
+    } finally { pool.execute = originalExecute; global.fetch = originalFetch; }
+});
+
+test("maintenance staff semantic search is scoped to active staff-hostel assignments", async () => {
+    const originalExecute = pool.execute;
+    const originalFetch = global.fetch;
+    try {
+        let body;
+        pool.execute = async (sql, params) => {
+            assert.match(sql, /staff_hostel_assignments/);
+            assert.deepEqual(params, [52]);
+            return [[{ hostel_id: 17 }], []];
+        };
+        global.fetch = async (_url, options) => {
+            body = JSON.parse(options.body);
+            return { ok: true, async json() { return { matches: [] }; } };
+        };
+        const { searchComplaints } = require("../src/services/vector.service");
+        assert.deepEqual(await searchComplaints({ user_id: 52, role: "MAINTENANCE_STAFF" }, "electrical socket issue"), []);
+        assert.equal(body.hostel_id, 17);
+        assert.deepEqual(body.hostel_ids, [17]);
+    } finally { pool.execute = originalExecute; global.fetch = originalFetch; }
+});
+
+test("administrator semantic search is scoped to the hostels present in MySQL", async () => {
+    const originalExecute = pool.execute;
+    const originalFetch = global.fetch;
+    try {
+        let body;
+        pool.execute = async (sql) => {
+            assert.match(sql, /FROM hostels/);
+            return [[{ hostel_id: 2 }, { hostel_id: 4 }, { hostel_id: 6 }], []];
+        };
+        global.fetch = async (_url, options) => {
+            body = JSON.parse(options.body);
+            return { ok: true, async json() { return { matches: [] }; } };
+        };
+        const { searchComplaints } = require("../src/services/vector.service");
+        assert.deepEqual(await searchComplaints({ user_id: 1, role: "ADMINISTRATOR" }, "broken ceiling fan"), []);
+        assert.deepEqual(body.hostel_ids, [2, 4, 6]);
+    } finally { pool.execute = originalExecute; global.fetch = originalFetch; }
+});
+
+test("semantic search rechecks Qdrant matches against MySQL hostel authorization", async () => {
+    const originalExecute = pool.execute;
+    const originalFetch = global.fetch;
+    try {
+        let queryCount = 0;
+        pool.execute = async (sql, params) => {
+            queryCount++;
+            if (queryCount === 1) {
+                assert.match(sql, /student_room_history/);
+                assert.deepEqual(params, [25]);
+                return [[{ hostel_id: 12 }], []];
+            }
+            assert.match(sql, /JOIN student_profiles requester/);
+            assert.match(sql, /c\.hostel_id IN/);
+            assert.deepEqual(params.slice(0, 1), [25]);
+            return [[{ complaint_id: 501, title: "Authorized bathroom leak", hostel_id: 12, status: "SUBMITTED" }], []];
+        };
+        global.fetch = async () => ({ ok: true, async json() { return { matches: [
+            { complaint_id: 501, similarity: 0.91 },
+            { complaint_id: 999, similarity: 0.99 }
+        ] }; } });
+        const { searchComplaints } = require("../src/services/vector.service");
+        const rows = await searchComplaints({ user_id: 25, role: "STUDENT" }, "bathroom leak");
+        assert.deepEqual(rows.map(row => row.complaint_id), [501]);
+        assert.equal(rows[0].similarity, 0.91);
+        assert.equal(queryCount, 2);
+    } finally { pool.execute = originalExecute; global.fetch = originalFetch; }
 });

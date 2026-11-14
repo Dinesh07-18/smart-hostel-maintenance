@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param([switch]$InstallDependencies)
 
 $ErrorActionPreference = "Stop"
@@ -29,7 +29,17 @@ if ($InstallDependencies) {
 }
 
 Invoke-Npm $Backend @("test") "Backend automated tests"
+Invoke-Npm $Frontend @("run","lint") "Frontend lint"
 Invoke-Npm $Frontend @("run","build") "Frontend production build"
 
+$Python = Get-Command python -ErrorAction SilentlyContinue
+if ($Python) {
+    Write-Host "`n=== Python embedding service syntax check ===" -ForegroundColor Cyan
+    & python -m compileall -q (Join-Path $Backend "embedding_service")
+    if ($LASTEXITCODE -ne 0) { throw "Python embedding service syntax check failed." }
+} else {
+    Write-Warning "Python was not found; embedding service syntax check was skipped."
+}
+
 Write-Host "`nVerification commands completed successfully." -ForegroundColor Green
-Write-Host "This does not replace live MySQL/API workflow testing."
+Write-Host "This does not replace live MySQL/API workflow testing, Qdrant indexing, model-dimension verification, role-isolation checks against a populated database, or browser-based end-to-end testing."

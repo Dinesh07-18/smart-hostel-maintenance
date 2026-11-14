@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Hostel Complaint Management — Frontend
 
-## Getting Started
+Next.js application for the Student, Maintenance Staff, Warden and Administrator roles.
 
-First, run the development server:
+## Local setup
 
-```bash
+```powershell
+Copy-Item .env.example .env.local
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The default API URL is `http://localhost:5001/api`. Change `NEXT_PUBLIC_API_URL` in `.env.local` only if the backend uses a different host or port.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Open `http://localhost:3000`. Sign in using accounts created by the development seed or an Administrator-created account. The seed password is configured privately through `DEMO_SEED_PASSWORD`; it is not committed to this repository.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Available commands
 
-## Learn More
+- `npm run dev` — local development server
+- `npm run lint` — ESLint
+- `npm run build` — production build
+- `npm start` — serve a completed production build
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The frontend does not contain database credentials. All authorization and data validation must be enforced by the backend.

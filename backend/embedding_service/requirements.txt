@@ -1,5 +1,6 @@
-﻿fastapi
+fastapi
 uvicorn[standard]
 requests
 numpy
 sentence-transformers
+python-dotenv

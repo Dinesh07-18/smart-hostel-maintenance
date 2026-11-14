@@ -7,8 +7,8 @@ import { login } from "../lib/api";
 export default function Home() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("student@hostel.com");
-  const [password, setPassword] = useState("Demo@123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -64,9 +64,9 @@ export default function Home() {
   return (
     <main className="login-page">
       <div className="login-card">
-        <h1>Smart Hostel Maintenance</h1>
+        <h1>Hostel Complaint Management</h1>
         <p className="subtitle">
-          Login to manage and track hostel maintenance complaints.
+          Submit, prioritize and track hostel maintenance complaints through resolution.
         </p>
 
         <form onSubmit={handleLogin}>
@@ -98,8 +98,8 @@ export default function Home() {
         {error && <div className="error-message">{error}</div>}
 
         <p className="demo-text">
-          Demo accounts: student@hostel.com, staff@hostel.com,
-          admin@hostel.com, warden@hostel.com
+          Local demo accounts: student1@demo.hostel.test, staff1@demo.hostel.test,
+          admin@demo.hostel.test, warden1@demo.hostel.test. See local setup instructions for the demo password.
         </p>
       </div>
     </main>

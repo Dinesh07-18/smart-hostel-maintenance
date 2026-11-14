@@ -1,4 +1,4 @@
-﻿const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
 
 async function authenticateToken(req, res, next) {
@@ -21,7 +21,7 @@ async function authenticateToken(req, res, next) {
     }
 
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        const payload = jwt.verify(token, process.env.JWT_SECRET, { issuer: "smart-hostel-maintenance", algorithms: ["HS256"] });
         const userId = Number(payload.sub);
 
         if (!Number.isSafeInteger(userId) || userId <= 0) {
